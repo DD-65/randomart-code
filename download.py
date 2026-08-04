@@ -33,5 +33,6 @@ for example in dataset:
     )
 
     saved += 1
+    print(f"Saved: {saved} images", end="\r")
 
 print(f"Saved {saved} images to {output_dir}")
