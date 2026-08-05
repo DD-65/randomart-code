@@ -4,6 +4,14 @@ Training and inference code for my first real Model, following the [HF diffusion
 It's an unconditional 128×128 DDPM that generates
 painterly abstract images. The resulting diffusion model is published in the [HF repository](https://huggingface.co/DD-65/randomart).
 
+## Examples
+
+| | | |
+|---|---|---|
+| ![](samples/generated-500_1.png) | ![](samples/generated-500_2.png) | ![](samples/generated-500_3.png) |
+
+
+
 ## Inference
 
 Run inference (assuming PyTorch and Diffusers are installed and the HF repo is downloaded to the same parent directory) from this directory with:
