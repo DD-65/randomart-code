@@ -13,7 +13,7 @@ dataset = load_dataset(
 # resize images to 256x256 / 128x128
 image_size = 128
 # You can lower your batch size if you're running out of GPU memory
-batch_size = 24
+batch_size = 8
 
 
 # Define data augmentations. Random cropping preserves the original aspect ratio.
