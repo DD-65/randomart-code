@@ -7,17 +7,22 @@ from diffusers import UNet2DModel, DDPMPipeline
 from load_dataset import noise_scheduler, train_dataloader
 
 
+# main training settings and output folders
 NUM_EPOCHS = 20
 CHECKPOINT_INTERVAL = 5
-CHECKPOINT_DIRECTORY = Path("checkpoints")
+PROJECT_DIRECTORY = Path(__file__).resolve().parent
+CHECKPOINT_DIRECTORY = PROJECT_DIRECTORY / "checkpoints"
+MODEL_DIRECTORY = PROJECT_DIRECTORY.parent / "randomart"
 
 
 def build_model():
+    # the UNet gets a noisy RGB image and tries to predict its noise
     return UNet2DModel(
         sample_size=128,
         in_channels=3,
         out_channels=3,
         layers_per_block=2,
+        # later blocks use more channels to learn more complex features
         block_out_channels=(64, 128, 128, 256),
         down_block_types=(
             "DownBlock2D",
@@ -35,6 +40,7 @@ def build_model():
 
 
 def find_latest_checkpoint():
+    # epoch numbers are padded, so sorting also gives the newest checkpoint
     checkpoint_files = sorted(CHECKPOINT_DIRECTORY.glob("epoch-*/training_state.pt"))
     return checkpoint_files[-1] if checkpoint_files else None
 
@@ -43,11 +49,11 @@ def save_checkpoint(model, optimizer, losses, completed_epoch):
     checkpoint_directory = CHECKPOINT_DIRECTORY / f"epoch-{completed_epoch:03d}"
     checkpoint_directory.mkdir(parents=True, exist_ok=True)
 
-    # This snapshot can be loaded directly for image generation.
+    # save a pipeline that can already be used to generate images
     image_pipeline = DDPMPipeline(unet=model, scheduler=noise_scheduler)
     image_pipeline.save_pretrained(checkpoint_directory / "pipeline")
 
-    # This state is what allows training to resume with the same optimizer.
+    # optimizer state and losses are needed to continue training later
     torch.save(
         {
             "completed_epoch": completed_epoch,
@@ -62,8 +68,10 @@ def save_checkpoint(model, optimizer, losses, completed_epoch):
 def restore_latest_checkpoint(model, optimizer):
     checkpoint_file = find_latest_checkpoint()
     if checkpoint_file is None:
+        # no checkpoint means training starts from epoch zero
         return 0, []
 
+    # load both the model weights and the old optimizer state
     checkpoint_directory = checkpoint_file.parent
     saved_pipeline = DDPMPipeline.from_pretrained(checkpoint_directory / "pipeline")
     model.load_state_dict(saved_pipeline.unet.state_dict())
@@ -77,6 +85,7 @@ def restore_latest_checkpoint(model, optimizer):
 
 
 def main():
+    # use the Mac GPU when it is available
     device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
     model = build_model().to(device)
 
@@ -91,6 +100,7 @@ def main():
             noise = torch.randn_like(clean_images)
             batch_size = clean_images.shape[0]
 
+            # every image gets a random point from the noising process
             timesteps = torch.randint(
                 0,
                 noise_scheduler.config.num_train_timesteps,
@@ -101,6 +111,7 @@ def main():
             noisy_images = noise_scheduler.add_noise(clean_images, noise, timesteps)
             noise_prediction = model(noisy_images, timesteps, return_dict=False)[0]
 
+            # compare predicted noise with the noise that was actually added
             loss = F.mse_loss(noise_prediction, noise)
             optimizer.zero_grad(set_to_none=True)
             loss.backward()
@@ -112,8 +123,9 @@ def main():
             print(f"Epoch: {epoch + 1}, loss: {epoch_loss}")
             save_checkpoint(model, optimizer, losses, epoch + 1)
 
+    # save the finished model in the separate Hugging Face model folder
     image_pipeline = DDPMPipeline(unet=model, scheduler=noise_scheduler)
-    image_pipeline.save_pretrained("randomart_pipeline")
+    image_pipeline.save_pretrained(MODEL_DIRECTORY)
 
 
 if __name__ == "__main__":

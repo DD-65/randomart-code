@@ -16,7 +16,7 @@ image_size = 128
 batch_size = 8
 
 
-# Define data augmentations. Random cropping preserves the original aspect ratio.
+# Define data augmentations. Random cropping preserves the original aspect ratio (important for artwork).
 # We also want to flip the images horizontally to get more variety in the training data
 preprocess = transforms.Compose(
     [
