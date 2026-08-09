@@ -8,7 +8,7 @@ painterly abstract images. The resulting diffusion model is published in the [HF
 
 | | | |
 |---|---|---|
-| ![](samples/generated-500_1.png) | ![](samples/generated-500_2.png) | ![](samples/generated-500_3.png) |
+| <img src="samples/generated-500_1.png" width="200" height="200" /> | <img src="samples/generated-500_2.png" width="200" height="200" /> | <img src="samples/generated-500_3.png" width="200" height="200" />
 
 
 
